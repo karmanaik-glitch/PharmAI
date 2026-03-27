@@ -528,6 +528,28 @@ const F     = {preg:false,peds:false,geri:false,counsel:false};
 
 /* ── INIT ── */
 window.addEventListener('DOMContentLoaded', () => {
+  /* --- THE PINCH-KILLER --- */
+  // 1. Stop double-tap to zoom on iOS Safari
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (event) => {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, false);
+
+  // 2. Stop pinch-to-zoom (Multi-touch)
+  document.addEventListener('touchmove', (event) => {
+    if (event.touches.length > 1) {
+      event.preventDefault(); // Kills the pinch
+    }
+  }, { passive: false });
+
+  // 3. Stop Safari's specific "gesture" zoom
+  document.addEventListener('gesturestart', (event) => {
+    event.preventDefault();
+  });
   lucide.createIcons();
   restoreTheme();
   checkKey();
