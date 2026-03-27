@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pharmai-v2'; // Changed v1 to v2 to force an update
+const CACHE_NAME = 'pharmai-v3'; // Changed v1 to v2 to force an update
 const FILES_TO_CACHE = [
   './',
   './index.html',
