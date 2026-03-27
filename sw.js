@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pharmai-v3'; // Changed v1 to v2 to force an update
+const CACHE_NAME = 'pharmai-v4'; // Upgraded to v4
 const FILES_TO_CACHE = [
   './',
   './index.html',
@@ -6,21 +6,34 @@ const FILES_TO_CACHE = [
   './icon.png'
 ];
 
-// Step 1: Install the Service Worker and save the files to the phone
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Forces the waiting service worker to become the active one immediately
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Files cached successfully!');
       return cache.addAll(FILES_TO_CACHE);
     })
   );
 });
 
-// Step 2: Intercept internet requests and serve the saved files if offline
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            console.log('Deleting old cache:', cache);
+            return caches.delete(cache); // Deletes v1, v2, and v3 for good
+          }
+        })
+      );
+    })
+  );
+  return self.clients.claim(); // Forces the SW to take control of the page immediately
+});
+
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((response) => {
-      // Return the cached file if found, otherwise try to fetch from the internet
       return response || fetch(event.request);
     })
   );
