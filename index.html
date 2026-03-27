@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="manifest.json"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="theme-color" content="#080e1a" id="tcm"/>
+  <title>PharmAI — Drug Information Assistant</title>
+  <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+:root{
+  --bg:#080e1a;--surface:#0f172a;--card:#162035;--card2:#1e2d48;
+  --border:#1e3050;--border2:#263d66;
+  --accent:#38bdf8;--adim:rgba(56,189,248,.12);
+  --accent2:#818cf8;--a2dim:rgba(129,140,248,.12);
+  --ok:#34d399;--okdim:rgba(52,211,153,.12);
+  --warn:#fbbf24;--wdim:rgba(251,191,36,.10);
+  --danger:#f87171;--ddim:rgba(248,113,113,.12);
+  --preg:#f472b6;--pdim:rgba(244,114,182,.12);
+  --peds:#a78bfa;--pedim:rgba(167,139,250,.12);
+  --geri:#fb923c;--gdim:rgba(251,146,60,.12);
+  --text:#e2e8f0;--text2:#94a3b8;--muted:#4a5568;
+  --ff:'Inter',system-ui,sans-serif;
+  --fb:'Playfair Display',Georgia,serif;
+  --fm:'JetBrains Mono','Fira Code',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+}
+body.light{
+  --bg:#f0f4f8;--surface:#fff;--card:#f8fafc;--card2:#eef2f7;
+  --border:#dde3ec;--border2:#c8d3e0;
+  --accent:#0284c7;--adim:rgba(2,132,199,.08);
+  --accent2:#4f46e5;--a2dim:rgba(79,70,229,.08);
+  --text:#0f172a;--text2:#475569;--muted:#94a3b8;
+}
+body{font-family:var(--ff);background:var(--bg);color:var(--text);height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;transition:background .3s,color .3s;font-size:15px}
+
+/* LOGIN */
+#lp{display:flex;align-items:center;justify-content:center;height:100dvh;width:100%;padding:20px;
+  background:radial-gradient(ellipse at 65% 35%,rgba(56,189,248,.08) 0%,transparent 55%),
+             radial-gradient(ellipse at 15% 80%,rgba(129,140,248,.08) 0%,transparent 50%),var(--bg)}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:44px 36px 36px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,.45);text-align:center;animation:fadeUp .55s var(--ease) both}
+.llogo{width:72px;height:72px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 32px rgba(56,189,248,.25);color:#fff}
+.lcard h1{font-family:var(--fb);font-size:2.1rem;font-weight:700;letter-spacing:-.01em;margin-bottom:6px;background:linear-gradient(135deg,var(--text),var(--text2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.lcard .sub{color:var(--text2);font-size:.85rem;margin-bottom:32px;line-height:1.65}
+.lfield{margin-bottom:12px}
+.lfield input{width:100%;background:var(--card);border:1.5px solid var(--border);color:var(--text);border-radius:12px;padding:14px 18px;font-size:.92rem;font-family:var(--fm);outline:none;transition:border-color .2s,box-shadow .2s;text-align:center;letter-spacing:.12em}
+.lfield input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.12)}
+.lfield input::placeholder{color:var(--muted);letter-spacing:0;font-family:var(--ff);font-size:.88rem}
+#klm{display:none;font-size:.78rem;color:var(--ok);margin-bottom:14px;line-height:1.6}
+#klm a{color:var(--danger);text-decoration:underline;cursor:pointer;display:inline-block;margin-top:4px}
+.lbtn{width:100%;min-height:48px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:12px;font-size:.95rem;font-weight:600;font-family:var(--ff);cursor:pointer;letter-spacing:.01em;transition:transform .15s var(--spring),opacity .2s,box-shadow .2s;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px}
+.lbtn:hover{opacity:.9;box-shadow:0 8px 24px rgba(56,189,248,.3)}
+.lbtn:active{transform:scale(.97)}
+#lerr{display:none;align-items:center;gap:6px;color:var(--danger);font-size:.78rem;margin-top:12px;justify-content:center}
+.lfooter{margin-top:24px;font-size:.72rem;color:var(--muted);line-height:1.9;border-top:1px solid var(--border);padding-top:20px}
+.lfooter a{color:var(--accent);text-decoration:none}
+
+/* APP */
+#ap{display:none;flex-direction:column;height:100dvh}
+
+/* HEADER */
+header{display:flex;align-items:center;gap:10px;padding:0 20px;height:58px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:10}
+.lmark{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+.ltitle{font-family:var(--fb);font-size:1.25rem;font-weight:700;letter-spacing:-.01em;line-height:1}
+.lsub{font-size:.65rem;color:var(--text2);margin-top:2px;font-weight:400}
+.hright{margin-left:auto;display:flex;align-items:center;gap:6px}
+.hbtn{min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;gap:5px;background:var(--card);border:1px solid var(--border);color:var(--text2);border-radius:8px;cursor:pointer;font-size:.75rem;font-family:var(--ff);font-weight:500;padding:0 10px;transition:all .18s;white-space:nowrap}
+.hbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--adim)}
+.hbtn:active{transform:scale(.95)}
+.hbtn.dng{border-color:rgba(248,113,113,.35);color:var(--danger)}
+.hbtn.dng:hover{background:var(--ddim)}
+.uchip{display:flex;align-items:center;gap:6px;background:var(--adim);border:1px solid rgba(56,189,248,.25);color:var(--accent);border-radius:20px;padding:5px 12px;font-size:.7rem;font-family:var(--fm);font-weight:500}
+.udot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+
+/* FILTERS BAR */
+#fb{display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+#fb::-webkit-scrollbar{display:none}
+.flbl{font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;margin-right:4px}
+.tw{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 8px;border-radius:20px;border:1px solid var(--border);background:var(--card);cursor:pointer;transition:all .2s;white-space:nowrap;user-select:none;min-height:32px}
+.tw:active{transform:scale(.96)}
+.tsw{position:relative;width:32px;height:18px;background:var(--border2);border-radius:9px;transition:background .25s;flex-shrink:0}
+.tsw::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .25s var(--spring),box-shadow .25s}
+.tw.preg.on{border-color:rgba(244,114,182,.4);background:var(--pdim)}.tw.preg.on .tsw{background:var(--preg);box-shadow:0 0 10px rgba(244,114,182,.4)}.tw.preg.on .tsw::after{transform:translateX(14px)}.tw.preg.on .tlbl{color:var(--preg)}
+.tw.peds.on{border-color:rgba(167,139,250,.4);background:var(--pedim)}.tw.peds.on .tsw{background:var(--peds);box-shadow:0 0 10px rgba(167,139,250,.4)}.tw.peds.on .tsw::after{transform:translateX(14px)}.tw.peds.on .tlbl{color:var(--peds)}
+.tw.geri.on{border-color:rgba(251,146,60,.4);background:var(--gdim)}.tw.geri.on .tsw{background:var(--geri);box-shadow:0 0 10px rgba(251,146,60,.4)}.tw.geri.on .tsw::after{transform:translateX(14px)}.tw.geri.on .tlbl{color:var(--geri)}
+.tw.counsel.on{border-color:rgba(52,211,153,.4);background:var(--okdim)}.tw.counsel.on .tsw{background:var(--ok);box-shadow:0 0 10px rgba(52,211,153,.4)}.tw.counsel.on .tsw::after{transform:translateX(14px)}.tw.counsel.on .tlbl{color:var(--ok)}
+.tico{display:flex;align-items:center;color:var(--text2);transition:color .2s}
+.tlbl{font-size:.72rem;font-weight:600;color:var(--text2);transition:color .2s}
+.fdiv{width:1px;height:20px;background:var(--border);flex-shrink:0;margin:0 4px}
+
+/* CAT BAR */
+#cb{display:flex;gap:6px;padding:9px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+#cb::-webkit-scrollbar{display:none}
+.cp{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:.7rem;font-weight:600;border:1px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;white-space:nowrap;min-height:30px;transition:all .18s}
+.cp:active{transform:scale(.95)}
+.cp.se:hover{border-color:var(--danger);color:var(--danger);background:var(--ddim)}
+.cp.dos:hover{border-color:var(--accent);color:var(--accent);background:var(--adim)}
+.cp.int:hover{border-color:var(--warn);color:var(--warn);background:var(--wdim)}
+.cp.con:hover{border-color:var(--accent2);color:var(--accent2);background:var(--a2dim)}
+.cp.mec:hover{border-color:var(--warn);color:var(--warn);background:var(--wdim)}
+.cp.gen:hover{border-color:var(--ok);color:var(--ok);background:var(--okdim)}
+
+/* CHAT */
+#chat{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:18px;overscroll-behavior:contain}
+#chat::-webkit-scrollbar{width:4px}
+#chat::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* WELCOME */
+.welcome{display:flex;flex-direction:column;align-items:center;text-align:center;margin:auto;padding:32px 20px;animation:fadeUp .5s var(--ease) both}
+.wico{width:72px;height:72px;background:linear-gradient(135deg,var(--adim),var(--a2dim));border:1px solid var(--border);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;color:var(--accent)}
+.welcome h2{font-family:var(--fb);font-size:1.7rem;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
+.welcome p{color:var(--text2);font-size:.85rem;max-width:380px;margin:0 auto 24px;line-height:1.65}
+.afchips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:20px}
+.afc{font-size:.68rem;padding:3px 10px;border-radius:20px;font-weight:600;display:flex;align-items:center;gap:4px}
+.afc.preg{background:var(--pdim);color:var(--preg);border:1px solid rgba(244,114,182,.25)}
+.afc.peds{background:var(--pedim);color:var(--peds);border:1px solid rgba(167,139,250,.25)}
+.afc.geri{background:var(--gdim);color:var(--geri);border:1px solid rgba(251,146,60,.25)}
+.afc.cmode{background:var(--okdim);color:var(--ok);border:1px solid rgba(52,211,153,.25)}
+.sgrid{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+.sq{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:.75rem;cursor:pointer;color:var(--text2);font-weight:500;min-height:34px;display:flex;align-items:center;transition:all .18s}
+.sq:hover{border-color:var(--accent);color:var(--accent);background:var(--adim)}
+.sq:active{transform:scale(.96)}
+
+/* MESSAGES */
+.msg{display:flex;gap:10px;animation:msgIn .3s var(--ease) both}
+.msg.user{flex-direction:row-reverse}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:4px}
+.avatar.ai{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.avatar.user{background:var(--card2);border:1px solid var(--border2);color:var(--text2)}
+.bubble{max-width:80%}
+.utxt{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:10px 15px;border-radius:18px 18px 4px 18px;font-size:.87rem;font-weight:500;display:inline-block;line-height:1.5}
+
+/* AI CARD */
+.aic{background:var(--card);border:1px solid var(--border);border-radius:4px 18px 18px 18px;overflow:hidden}
+.ctag{display:flex;align-items:center;gap:7px;padding:8px 14px;font-size:.67rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.ctag.se{background:var(--ddim);color:var(--danger)}
+.ctag.dos{background:var(--adim);color:var(--accent)}
+.ctag.int{background:var(--wdim);color:var(--warn)}
+.ctag.con{background:var(--a2dim);color:var(--accent2)}
+.ctag.mec{background:var(--wdim);color:var(--warn)}
+.ctag.gen{background:var(--okdim);color:var(--ok)}
+.fbadges{display:flex;gap:5px;flex-wrap:wrap;padding:6px 14px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.08)}
+.fb2{font-size:.64rem;padding:2px 8px;border-radius:20px;font-weight:600;display:flex;align-items:center;gap:3px}
+.fb2.preg{background:var(--pdim);color:var(--preg)}
+.fb2.peds{background:var(--pedim);color:var(--peds)}
+.fb2.geri{background:var(--gdim);color:var(--geri)}
+.fb2.cmode{background:var(--okdim);color:var(--ok)}
+.asum{padding:11px 14px;border-bottom:1px solid var(--border);font-size:.87rem;font-weight:600;line-height:1.5;display:flex;align-items:flex-start;gap:7px}
+.asum svg{flex-shrink:0;margin-top:2px;color:var(--accent)}
+.aalert{margin:10px 14px 0;padding:9px 12px;border-radius:8px;font-size:.77rem;display:flex;gap:8px;align-items:flex-start;line-height:1.55}
+.aalert.warn{background:var(--wdim);border:1px solid rgba(251,191,36,.25);color:var(--warn)}
+.aalert.dng{background:var(--ddim);border:1px solid rgba(248,113,113,.25);color:var(--danger)}
+.aslbl{padding:10px 14px 3px;font-size:.63rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:5px}
+.abody{padding:3px 14px 12px;font-size:.83rem;line-height:1.8}
+.abody p{margin-bottom:8px}.abody p:last-child{margin-bottom:0}
+.abody strong{color:var(--accent);font-weight:600}
+.abody ul,.abody ol{padding-left:16px;margin-bottom:8px}
+.abody li{margin-bottom:5px}
+.kpw{border-top:1px solid var(--border);padding:10px 14px 12px}
+.kpi{display:flex;gap:8px;align-items:flex-start;font-size:.81rem;margin-bottom:6px;line-height:1.5}
+.kpi:last-child{margin-bottom:0}
+.kpd{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:7px}
+.srcrow{padding:9px 14px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.srclbl{font-size:.63rem;color:var(--muted);font-weight:700;margin-right:3px;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:4px}
+.srcc{font-size:.65rem;padding:2px 8px;border-radius:20px;border:1px solid var(--border2);color:var(--text2);background:var(--card2);font-family:var(--fm)}
+.acbar{display:flex;border-top:1px solid var(--border)}
+.acbtn{flex:1;min-height:40px;display:flex;align-items:center;justify-content:center;gap:6px;background:none;border:none;color:var(--text2);font-size:.75rem;font-family:var(--ff);font-weight:600;cursor:pointer;transition:all .18s;padding:0 10px}
+.acbtn:hover{background:var(--adim);color:var(--accent)}
+.acbtn:active{opacity:.7}
+.acbtn+.acbtn{border-left:1px solid var(--border)}
+
+/* TYPING */
+.tcard{background:var(--card);border:1px solid var(--border);border-radius:4px 18px 18px 18px;padding:14px 16px;display:flex;gap:5px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:tb 1.3s ease infinite}
+.dot:nth-child(2){animation-delay:.18s}.dot:nth-child(3){animation-delay:.36s}
+@keyframes tb{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+
+/* INPUT */
+#ia{padding:12px 16px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.irow{display:flex;align-items:flex-end;gap:8px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:8px 10px;transition:border-color .2s,box-shadow .2s}
+.irow:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.1)}
+.iibtn{min-width:36px;min-height:36px;background:none;border:none;color:var(--text2);cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s;padding:0}
+.iibtn:hover{color:var(--accent);background:var(--adim)}
+.iibtn:active{transform:scale(.9)}
+.iibtn.micon{color:var(--danger);background:var(--ddim);animation:mp 1s ease infinite}
+@keyframes mp{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.4)}50%{box-shadow:0 0 0 5px rgba(248,113,113,0)}}
+#query{flex:1;background:none;border:none;color:var(--text);font-family:var(--ff);font-size:.88rem;outline:none;resize:none;max-height:100px;line-height:1.5;padding:6px 0}
+#query::placeholder{color:var(--muted)}
+#sbtn{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s}
+#sbtn:hover{opacity:.88;box-shadow:0 4px 14px rgba(56,189,248,.3)}
+#sbtn:active{transform:scale(.92)}
+#sbtn:disabled{opacity:.35;cursor:not-allowed}
+.ihint{font-size:.63rem;color:var(--muted);text-align:center;margin-top:5px}
+.disc{display:flex;align-items:center;justify-content:center;gap:5px;background:var(--wdim);border-top:1px solid rgba(251,191,36,.15);padding:5px 16px;font-size:.64rem;color:var(--warn);text-align:center;flex-shrink:0;font-weight:500}
+
+/* MODAL */
+.mov{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.72);z-index:500;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);padding:20px}
+.mov.open{display:flex}
+.msh{background:var(--surface);border:1px solid var(--border);border-radius:24px 24px 12px 12px;width:100%;max-width:480px;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;animation:slideUp .3s var(--ease) both}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.mhdr{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.mtitle{display:flex;align-items:center;gap:9px;font-size:1rem;font-weight:700}
+.mtitle svg{color:var(--accent)}
+.mclose{width:32px;height:32px;background:var(--card);border:1px solid var(--border);color:var(--text2);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s}
+.mclose:hover{border-color:var(--danger);color:var(--danger)}
+.mtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tbtn{flex:1;min-height:44px;background:none;border:none;color:var(--text2);font-weight:600;font-size:.8rem;font-family:var(--ff);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:6px}
+.tbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tbtn:hover:not(.active){color:var(--text)}
+.mbody{flex:1;overflow-y:auto;padding:20px}
+.mbody::-webkit-scrollbar{width:4px}
+.mbody::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.tp{display:none}.tp.active{display:block}
+.ccard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+.ccard h4{font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.crow{display:flex;gap:8px;margin-bottom:8px}
+.crow input,.crow select{flex:1;min-height:40px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0 10px;font-size:.85rem;font-family:var(--ff);outline:none;transition:border-color .18s}
+.crow input:focus,.crow select:focus{border-color:var(--accent)}
+.crow select option{background:var(--surface)}
+.cact{width:100%;min-height:40px;background:var(--card2);border:1px solid var(--border2);color:var(--text);border-radius:8px;font-weight:600;font-size:.82rem;font-family:var(--ff);cursor:pointer;margin-top:4px;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:6px}
+.cact:hover{background:var(--adim);border-color:var(--accent);color:var(--accent)}
+.cres{margin-top:10px;text-align:center;font-weight:700;font-size:1rem;color:var(--ok);min-height:24px}
+.ltbl{width:100%;border-collapse:collapse;font-size:.78rem}
+.ltbl th,.ltbl td{padding:8px 10px;border:1px solid var(--border);text-align:left}
+.ltbl th{background:var(--card2);color:var(--accent);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+.ltbl tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+.lsh td{background:var(--card2)!important;color:var(--text2);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding:6px 10px}
+
+/* CAMERA */
+#cm{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:2000;display:none;flex-direction:column}
+#cm.open{display:flex}
+.camhdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;color:#fff}
+.camhdr h3{font-family:var(--fb);font-size:1.1rem}
+.camcls{width:36px;height:36px;background:rgba(255,255,255,.12);border:none;border-radius:50%;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .18s}
+.camcls:hover{background:rgba(255,255,255,.22)}
+.camvp{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#video{width:100%;height:100%;object-fit:cover}
+.cambox{position:absolute;width:82%;max-width:340px;height:130px;border:2px dashed var(--accent);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.52);animation:scanP 2s ease-in-out infinite}
+@keyframes scanP{0%,100%{border-color:var(--accent)}50%{border-color:var(--accent2)}}
+.scanl{position:absolute;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);top:0;animation:scanM 2s linear infinite}
+@keyframes scanM{0%{transform:translateY(0)}100%{transform:translateY(130px)}}
+.camft{padding:24px 20px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+#snapbtn{width:100%;min-height:52px;border:none;border-radius:26px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700;font-size:.95rem;font-family:var(--ff);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .18s}
+#snapbtn:hover{opacity:.9}
+#snapbtn:active{transform:scale(.97)}
+#snapbtn:disabled{opacity:.5;cursor:not-allowed}
+.camhnt{font-size:.72rem;color:var(--text2);text-align:center;display:flex;align-items:center;justify-content:center;gap:4px}
+#canvas{display:none}
+
+/* OCR PREVIEW */
+#opm{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px)}
+#opm.open{display:flex}
+.opcard{background:var(--surface);border:1px solid var(--border);border-radius:24px;width:100%;max-width:440px;padding:24px;animation:fadeUp .3s var(--ease) both}
+.opcard h3{font-size:.95rem;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:7px;color:var(--accent)}
+.opcard p{font-size:.75rem;color:var(--text2);margin-bottom:12px}
+#ocredit{width:100%;height:100px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--fm);font-size:.8rem;padding:10px;outline:none;resize:vertical;transition:border-color .2s}
+#ocredit:focus{border-color:var(--accent)}
+.opacts{display:flex;gap:8px;margin-top:12px}
+.opbtn{flex:1;min-height:42px;border-radius:8px;border:1px solid var(--border);font-weight:600;font-size:.82rem;font-family:var(--ff);cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:6px}
+.opbtn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff}
+.opbtn.sec{background:var(--card);color:var(--text2)}
+.opbtn.sec:hover{border-color:var(--accent);color:var(--accent)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(min-width:640px){
+  header,#fb,#cb{padding-left:28px;padding-right:28px}
+  #chat{padding:24px 28px}
+  #ia{padding:14px 28px;padding-bottom:max(14px,env(safe-area-inset-bottom))}
+  .bubble{max-width:72%}
+}
+body.light .aic{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+body.light .utxt{color:#fff}
+body.light #snapbtn{color:#fff}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="lp">
+  <div class="lcard">
+    <div class="llogo"><i data-lucide="pill" style="width:30px;height:30px"></i></div>
+    <h1>PharmAI</h1>
+    <p class="sub">Your intelligent drug information assistant.<br/>Enter your credentials to continue.</p>
+    <div class="lfield"><input type="password" id="ac" placeholder="Enter access code" autocomplete="off"/></div>
+    <div id="akc"><div class="lfield"><input type="password" id="aki" placeholder="Enter Groq API Key  (gsk_...)" autocomplete="off"/></div></div>
+    <div id="klm"><i data-lucide="shield-check" style="width:13px;height:13px"></i> API Key securely loaded from this device.<br/><a href="#" onclick="resetKey();return false">Reset key</a></div>
+    <button class="lbtn" onclick="doLogin()"><i data-lucide="log-in" style="width:16px;height:16px"></i> Continue</button>
+    <div id="lerr"><i data-lucide="alert-circle" style="width:13px;height:13px"></i> Invalid access code or API key.</div>
+    <div class="lfooter">Don't have an access code? <a href="mailto:admin@pharmai.com">Contact admin</a><br/>Educational &amp; clinical reference only. Not a substitute for professional medical advice.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="ap">
+  <header>
+    <div class="lmark"><i data-lucide="pill" style="width:18px;height:18px"></i></div>
+    <div><div class="ltitle">PharmAI</div><div class="lsub">Drug Information Assistant</div></div>
+    <div class="hright">
+      <button class="hbtn" onclick="toggleTheme()" id="thbtn" title="Toggle theme"><i data-lucide="sun" id="thico" style="width:15px;height:15px"></i></button>
+      <button class="hbtn" onclick="openModal('tm')" title="Clinical Tools"><i data-lucide="calculator" style="width:15px;height:15px"></i> Tools</button>
+      <div class="uchip"><div class="udot"></div><span id="ubadge">user</span></div>
+      <button class="hbtn dng" onclick="doLogout()" title="Logout"><i data-lucide="log-out" style="width:15px;height:15px"></i></button>
+    </div>
+  </header>
+
+  <!-- FILTERS BAR -->
+  <div id="fb">
+    <span class="flbl">Filters</span>
+    <div class="tw preg" id="t-preg" onclick="toggleFilter('preg')">
+      <div class="tico"><i data-lucide="baby" style="width:12px;height:12px"></i></div>
+      <div class="tsw"></div><span class="tlbl">Pregnancy</span>
+    </div>
+    <div class="tw peds" id="t-peds" onclick="toggleFilter('peds')">
+      <div class="tico"><i data-lucide="users" style="width:12px;height:12px"></i></div>
+      <div class="tsw"></div><span class="tlbl">Pediatric</span>
+    </div>
+    <div class="tw geri" id="t-geri" onclick="toggleFilter('geri')">
+      <div class="tico"><i data-lucide="accessibility" style="width:12px;height:12px"></i></div>
+      <div class="tsw"></div><span class="tlbl">Geriatric</span>
+    </div>
+    <div class="fdiv"></div>
+    <div class="tw counsel" id="t-counsel" onclick="toggleFilter('counsel')">
+      <div class="tico"><i data-lucide="message-circle" style="width:12px;height:12px"></i></div>
+      <div class="tsw"></div><span class="tlbl">Counselor Mode</span>
+    </div>
+  </div>
+
+  <!-- CAT BAR -->
+  <div id="cb">
+    <div class="cp se"  onclick="insertQuery('What are the side effects of ibuprofen?')"><i data-lucide="zap" style="width:11px;height:11px"></i> Side Effects</div>
+    <div class="cp dos" onclick="insertQuery('What is the dosage of amoxicillin for adults?')"><i data-lucide="pill" style="width:11px;height:11px"></i> Dosage</div>
+    <div class="cp int" onclick="insertQuery('Can I take metformin with aspirin?')"><i data-lucide="activity" style="width:11px;height:11px"></i> Interactions</div>
+    <div class="cp con" onclick="insertQuery('Who should not take warfarin?')"><i data-lucide="shield-x" style="width:11px;height:11px"></i> Contraindications</div>
+    <div class="cp mec" onclick="insertQuery('How does metoprolol work?')"><i data-lucide="cpu" style="width:11px;height:11px"></i> Mechanism</div>
+    <div class="cp gen" onclick="insertQuery('What is atorvastatin used for?')"><i data-lucide="info" style="width:11px;height:11px"></i> General Info</div>
+  </div>
+
+  <!-- CHAT -->
+  <div id="chat"><div id="welcome-wrap"></div></div>
+
+  <!-- INPUT -->
+  <div id="ia">
+    <div class="irow">
+      <button class="iibtn" onclick="openCamera()" title="Scan label"><i data-lucide="camera" style="width:18px;height:18px"></i></button>
+      <button class="iibtn" id="micbtn" onclick="toggleMic()" title="Voice input"><i data-lucide="mic" style="width:18px;height:18px" id="micico"></i></button>
+      <textarea id="query" rows="1" placeholder="Type, speak, or scan a label…"></textarea>
+      <button id="sbtn" onclick="sendQuery()"><i data-lucide="send" style="width:15px;height:15px"></i></button>
+    </div>
+    <div class="ihint">Enter to send · Shift+Enter for new line</div>
+  </div>
+  <div class="disc"><i data-lucide="alert-triangle" style="width:11px;height:11px"></i> Educational &amp; clinical reference only. Always verify with licensed healthcare professionals.</div>
+</div>
+
+<!-- TOOLS MODAL -->
+<div class="mov" id="tm" onclick="handleOC(event,'tm')">
+  <div class="msh">
+    <div class="mhdr">
+      <div class="mtitle"><i data-lucide="calculator" style="width:18px;height:18px"></i> Clinical Tools</div>
+      <button class="mclose" onclick="closeModal('tm')"><i data-lucide="x" style="width:14px;height:14px"></i></button>
+    </div>
+    <div class="mtabs">
+      <button class="tbtn active" onclick="switchTab(event,'calc')"><i data-lucide="calculator" style="width:12px;height:12px"></i> Calculators</button>
+      <button class="tbtn" onclick="switchTab(event,'cheat')"><i data-lucide="table" style="width:12px;height:12px"></i> Lab Values</button>
+      <button class="tbtn" onclick="switchTab(event,'preg')"><i data-lucide="baby" style="width:12px;height:12px"></i> Preg. Cat.</button>
+    </div>
+    <div class="mbody">
+      <div class="tp active" id="tp-calc">
+        <div class="ccard">
+          <h4><i data-lucide="flask-conical" style="width:15px;height:15px"></i> CrCl — Cockcroft-Gault</h4>
+          <div class="crow"><input type="number" id="c-age" placeholder="Age (yrs)"><input type="number" id="c-wt" placeholder="Weight (kg)"></div>
+          <div class="crow"><input type="number" id="c-scr" placeholder="SCr (mg/dL)" step="0.01"><select id="c-sex"><option value="M">Male</option><option value="F">Female</option></select></div>
+          <button class="cact" onclick="calcCrCl()"><i data-lucide="play" style="width:12px;height:12px"></i> Calculate</button>
+          <div class="cres" id="r-crcl"></div>
+        </div>
+        <div class="ccard">
+          <h4><i data-lucide="ruler" style="width:15px;height:15px"></i> BMI Calculator</h4>
+          <div class="crow"><input type="number" id="b-ht" placeholder="Height (cm)"><input type="number" id="b-wt" placeholder="Weight (kg)"></div>
+          <button class="cact" onclick="calcBMI()"><i data-lucide="play" style="width:12px;height:12px"></i> Calculate</button>
+          <div class="cres" id="r-bmi"></div>
+        </div>
+        <div class="ccard">
+          <h4><i data-lucide="users" style="width:15px;height:15px"></i> Pediatric Dose (mg/kg)</h4>
+          <div class="crow"><input type="number" id="p-wt" placeholder="Weight (kg)"><input type="number" id="p-dose" placeholder="Dose (mg/kg)" step="0.1"></div>
+          <button class="cact" onclick="calcPed()"><i data-lucide="play" style="width:12px;height:12px"></i> Calculate</button>
+          <div class="cres" id="r-ped"></div>
+        </div>
+      </div>
+      <div class="tp" id="tp-cheat">
+        <table class="ltbl">
+          <thead><tr><th>Test</th><th>Normal Range</th></tr></thead>
+          <tbody>
+            <tr class="lsh"><td colspan="2">Electrolytes</td></tr>
+            <tr><td>Sodium (Na⁺)</td><td>135–145 mEq/L</td></tr>
+            <tr><td>Potassium (K⁺)</td><td>3.5–5.0 mEq/L</td></tr>
+            <tr><td>Chloride (Cl⁻)</td><td>95–105 mEq/L</td></tr>
+            <tr><td>Bicarbonate</td><td>22–28 mEq/L</td></tr>
+            <tr><td>Calcium</td><td>8.5–10.5 mg/dL</td></tr>
+            <tr><td>Magnesium</td><td>1.7–2.2 mg/dL</td></tr>
+            <tr class="lsh"><td colspan="2">Renal</td></tr>
+            <tr><td>BUN</td><td>8–20 mg/dL</td></tr>
+            <tr><td>Creatinine (M)</td><td>0.7–1.2 mg/dL</td></tr>
+            <tr><td>Creatinine (F)</td><td>0.5–1.0 mg/dL</td></tr>
+            <tr><td>eGFR</td><td>≥60 mL/min/1.73m²</td></tr>
+            <tr class="lsh"><td colspan="2">Hematology</td></tr>
+            <tr><td>Hgb (M)</td><td>13.5–17.5 g/dL</td></tr>
+            <tr><td>Hgb (F)</td><td>12.0–15.5 g/dL</td></tr>
+            <tr><td>WBC</td><td>4,500–11,000 /µL</td></tr>
+            <tr><td>Platelets</td><td>150,000–400,000 /µL</td></tr>
+            <tr class="lsh"><td colspan="2">Liver / Metabolic</td></tr>
+            <tr><td>ALT</td><td>7–56 U/L</td></tr>
+            <tr><td>AST</td><td>10–40 U/L</td></tr>
+            <tr><td>Total Bilirubin</td><td>0.2–1.2 mg/dL</td></tr>
+            <tr><td>Albumin</td><td>3.5–5.0 g/dL</td></tr>
+            <tr><td>Glucose (fasting)</td><td>70–100 mg/dL</td></tr>
+            <tr><td>HbA1c</td><td>&lt;5.7% (normal)</td></tr>
+            <tr class="lsh"><td colspan="2">Coagulation</td></tr>
+            <tr><td>PT</td><td>11–13.5 sec</td></tr>
+            <tr><td>INR</td><td>0.8–1.1 (therapeutic 2–3)</td></tr>
+            <tr><td>aPTT</td><td>30–40 sec</td></tr>
+            <tr class="lsh"><td colspan="2">Thyroid</td></tr>
+            <tr><td>TSH</td><td>0.4–4.0 mIU/L</td></tr>
+            <tr><td>Free T4</td><td>0.8–1.8 ng/dL</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tp" id="tp-preg">
+        <div class="ccard" style="margin-bottom:0">
+          <h4><i data-lucide="baby" style="width:15px;height:15px"></i> FDA Pregnancy Categories</h4>
+          <table class="ltbl" style="margin-bottom:14px">
+            <thead><tr><th>Category</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><strong style="color:var(--ok)">A</strong></td><td>Adequate studies — no fetal risk</td></tr>
+              <tr><td><strong style="color:var(--accent)">B</strong></td><td>Animal studies OK, no adequate human data</td></tr>
+              <tr><td><strong style="color:var(--warn)">C</strong></td><td>Animal risk shown — benefit may outweigh risk</td></tr>
+              <tr><td><strong style="color:var(--danger)">D</strong></td><td>Human fetal risk — benefit may justify use</td></tr>
+              <tr><td><strong style="color:#dc2626">X</strong></td><td>Fetal risk &gt; benefit — contraindicated</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:.73rem;color:var(--text2);line-height:1.6">FDA replaced letter categories in 2015 with the PLLR. Enable the <strong style="color:var(--accent)">Pregnancy toggle</strong> above to include FDA/PLLR data in AI responses.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CAMERA MODAL -->
+<div id="cm">
+  <div class="camhdr">
+    <h3>Scan Medication Label</h3>
+    <button class="camcls" onclick="closeCamera()"><i data-lucide="x" style="width:16px;height:16px"></i></button>
+  </div>
+  <div class="camvp">
+    <video id="video" autoplay playsinline></video>
+    <div class="cambox"><div class="scanl"></div></div>
+  </div>
+  <div class="camft">
+    <button id="snapbtn" onclick="captureAndScan()">
+      <i data-lucide="camera" style="width:20px;height:20px"></i> Take Photo &amp; Scan
+    </button>
+    <p class="camhnt"><i data-lucide="info" style="width:12px;height:12px"></i> Position text inside the dashed box</p>
+  </div>
+  <canvas id="canvas"></canvas>
+</div>
+
+<!-- OCR PREVIEW -->
+<div id="opm">
+  <div class="opcard">
+    <h3><i data-lucide="scan-text" style="width:16px;height:16px"></i> Review Scanned Text</h3>
+    <p>Tesseract extracted the text below. Edit if needed before sending.</p>
+    <textarea id="ocredit" placeholder="Scanned text will appear here…"></textarea>
+    <div class="opacts">
+      <button class="opbtn sec" onclick="closeOCR()"><i data-lucide="x" style="width:13px;height:13px"></i> Cancel</button>
+      <button class="opbtn pri" onclick="confirmOCR()"><i data-lucide="send" style="width:13px;height:13px"></i> Use This Text</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ── CONFIG ── */
+const ACCESS_CODES = ['karma123'];
+const GROQ_MODEL   = 'llama-3.3-70b-versatile';
+const SHEETS_URL   = '';
+const MAX_HIST     = 10;
+
+/* ── STATE ── */
+let user    = null;
+let loading = false;
+let micOn   = false;
+let recog   = null;
+let hist    = [];
+const F     = {preg:false,peds:false,geri:false,counsel:false};
+
+/* ── INIT ── */
+window.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  restoreTheme();
+  checkKey();
+  initMic();
+  renderWelcome();
+
+  document.getElementById('query').addEventListener('keydown', e => {
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendQuery();}
+  });
+  document.getElementById('query').addEventListener('input', autoResize);
+  document.getElementById('ac').addEventListener('keydown',  e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById('aki').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
+});
+
+/* ── THEME ── */
+function restoreTheme(){
+  if(localStorage.getItem('ptheme')==='light') applyTheme('light');
+}
+function toggleTheme(){
+  applyTheme(document.body.classList.contains('light')?'dark':'light');
+}
+function applyTheme(m){
+  document.body.classList.toggle('light', m==='light');
+  const ico = document.getElementById('thico');
+  ico.setAttribute('data-lucide', m==='light'?'moon':'sun');
+  document.getElementById('tcm').content = m==='light'?'#ffffff':'#080e1a';
+  localStorage.setItem('ptheme', m);
+  lucide.createIcons();
+}
+
+/* ── API KEY ── */
+function checkKey(){
+  const k = localStorage.getItem('pgroq');
+  document.getElementById('akc').style.display = k?'none':'block';
+  document.getElementById('klm').style.display  = k?'block':'none';
+}
+function resetKey(){localStorage.removeItem('pgroq');checkKey();}
+function getKey(){return localStorage.getItem('pgroq')||document.getElementById('aki').value.trim();}
+
+/* ── LOGIN / LOGOUT ── */
+function doLogin(){
+  const code = document.getElementById('ac').value.trim().toLowerCase();
+  const key  = document.getElementById('aki').value.trim()||localStorage.getItem('pgroq');
+  if(ACCESS_CODES.includes(code) && key && key.startsWith('gsk_')){
+    localStorage.setItem('pgroq', key);
+    user = code;
+    document.getElementById('ubadge').textContent = code;
+    document.getElementById('lerr').style.display  = 'none';
+    document.getElementById('lp').style.display    = 'none';
+    document.getElementById('ap').style.display    = 'flex';
+    hist = loadHist();
+    renderWelcome();
+  } else {
+    document.getElementById('lerr').style.display = 'flex';
+  }
+}
+function doLogout(){
+  user = null;
+  document.getElementById('ap').style.display = 'none';
+  document.getElementById('lp').style.display = 'flex';
+  document.getElementById('ac').value = '';
+  checkKey();
+  clearChat();
+}
+
+/* ── FILTERS ── */
+function toggleFilter(k){
+  F[k]=!F[k];
+  document.getElementById('t-'+k).classList.toggle('on',F[k]);
+  updateFilterChips();
+}
+function updateFilterChips(){
+  const el = document.getElementById('afc-wrap');
+  if(!el)return;
+  const map = {
+    preg:   {l:'Pregnancy Mode',   c:'preg',  i:'baby'},
+    peds:   {l:'Pediatric Mode',   c:'peds',  i:'users'},
+    geri:   {l:'Geriatric / Beers',c:'geri',  i:'accessibility'},
+    counsel:{l:'Counselor Mode',   c:'cmode', i:'message-circle'},
+  };
+  el.innerHTML = Object.entries(F).filter(([,v])=>v).map(([k])=>{
+    const m=map[k];
+    return `<div class="afc ${m.c}"><i data-lucide="${m.i}" style="width:10px;height:10px"></i> ${m.l}</div>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+/* ── MODAL ── */
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function handleOC(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+
+/* ── TABS ── */
+function switchTab(e,key){
+  const sh = e.target.closest('.msh');
+  sh.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));
+  sh.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tp-'+key).classList.add('active');
+  e.target.closest('.tbtn').classList.add('active');
+}
+
+/* ── CALCULATORS ── */
+function calcCrCl(){
+  const age=+document.getElementById('c-age').value,
+        wt=+document.getElementById('c-wt').value,
+        scr=+document.getElementById('c-scr').value,
+        sex=document.getElementById('c-sex').value,
+        el=document.getElementById('r-crcl');
+  if(!age||!wt||!scr){el.style.color='var(--danger)';el.textContent='Fill all fields.';return;}
+  let v=((140-age)*wt)/(72*scr);if(sex==='F')v*=0.85;v=Math.max(0,v);
+  const stage=v>=90?'Normal':v>=60?'Mildly reduced':v>=30?'Moderately reduced':v>=15?'Severely reduced':'Kidney failure';
+  el.style.color=v>=60?'var(--ok)':v>=30?'var(--warn)':'var(--danger)';
+  el.textContent=`${v.toFixed(1)} mL/min — ${stage}`;
+}
+function calcBMI(){
+  const ht=+document.getElementById('b-ht').value/100,
+        wt=+document.getElementById('b-wt').value,
+        el=document.getElementById('r-bmi');
+  if(!ht||!wt){el.style.color='var(--danger)';el.textContent='Fill all fields.';return;}
+  const b=wt/(ht*ht),cat=b<18.5?'Underweight':b<25?'Normal':b<30?'Overweight':'Obese';
+  el.style.color=(b>=18.5&&b<25)?'var(--ok)':b<30?'var(--warn)':'var(--danger)';
+  el.textContent=`${b.toFixed(1)} kg/m² — ${cat}`;
+}
+function calcPed(){
+  const wt=+document.getElementById('p-wt').value,
+        dose=+document.getElementById('p-dose').value,
+        el=document.getElementById('r-ped');
+  if(!wt||!dose){el.style.color='var(--danger)';el.textContent='Fill all fields.';return;}
+  el.style.color='var(--ok)';el.textContent=`Total dose: ${(wt*dose).toFixed(2)} mg`;
+}
+
+/* ── HISTORY ── */
+function saveHist(){
+  try{localStorage.setItem('phist_'+user,JSON.stringify(hist.slice(-MAX_HIST*2)));}catch(e){}
+}
+function loadHist(){
+  try{const s=localStorage.getItem('phist_'+user);return s?JSON.parse(s):[];}catch(e){return[];}
+}
+
+/* ── CHAT UTILS ── */
+const chat = ()=>document.getElementById('chat');
+function scrollDown(){const c=chat();c.scrollTo({top:c.scrollHeight,behavior:'smooth'});}
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function autoResize(){const q=document.getElementById('query');q.style.height='auto';q.style.height=Math.min(q.scrollHeight,100)+'px';}
+function insertQuery(t){const q=document.getElementById('query');q.value=t;autoResize();q.focus();}
+
+function clearChat(){
+  hist=[];
+  const c=chat();
+  c.innerHTML='<div id="welcome-wrap"></div>';
+  renderWelcome();
+}
+
+function renderWelcome(){
+  const w=document.getElementById('welcome-wrap');
+  if(!w)return;
+  w.innerHTML=`
+    <div class="welcome">
+      <div class="wico"><i data-lucide="dna" style="width:28px;height:28px"></i></div>
+      <h2>Ask about any drug</h2>
+      <p>Clinically rigorous answers covering pharmacology, pharmacokinetics, and evidence-based guidelines — FDA, WHO, PubMed &amp; more.</p>
+      <div class="afchips" id="afc-wrap"></div>
+      <div class="sgrid">
+        <span class="sq" onclick="insertQuery('What are the side effects of metformin?')">Side effects of metformin</span>
+        <span class="sq" onclick="insertQuery('Dosage of paracetamol for a 10kg child?')">Paracetamol child dosage</span>
+        <span class="sq" onclick="insertQuery('Can I take ibuprofen with warfarin?')">Ibuprofen + warfarin</span>
+        <span class="sq" onclick="insertQuery('What drugs are contraindicated in pregnancy?')">Drugs in pregnancy</span>
+        <span class="sq" onclick="insertQuery('How does omeprazole work? Include Vd and half-life.')">Omeprazole mechanism</span>
+        <span class="sq" onclick="insertQuery('Beers Criteria drugs to avoid in elderly patients')">Beers Criteria</span>
+      </div>
+    </div>`;
+  lucide.createIcons();
+  updateFilterChips();
+}
+
+function removeWelcome(){const w=document.getElementById('welcome-wrap');if(w)w.remove();}
+
+/* ── RENDER MESSAGES ── */
+function appendUser(text){
+  removeWelcome();
+  const d=document.createElement('div');d.className='msg user';
+  d.innerHTML=`<div class="avatar user"><i data-lucide="user" style="width:14px;height:14px"></i></div><div class="bubble"><div class="utxt">${esc(text)}</div></div>`;
+  chat().appendChild(d);lucide.createIcons();scrollDown();
+}
+
+function appendTyping(){
+  const d=document.createElement('div');d.className='msg';d.id='typ';
+  d.innerHTML=`<div class="avatar ai"><i data-lucide="bot" style="width:14px;height:14px"></i></div><div class="bubble"><div class="tcard"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  chat().appendChild(d);lucide.createIcons();scrollDown();
+}
+function removeTyping(){const t=document.getElementById('typ');if(t)t.remove();}
+
+function appendAI(p){
+  const CM={
+    'Side Effects':       {c:'se', i:'zap'},
+    'Dosage':             {c:'dos',i:'pill'},
+    'Drug Interaction':   {c:'int',i:'activity'},
+    'Contraindication':   {c:'con',i:'shield-x'},
+    'Mechanism of Action':{c:'mec',i:'cpu'},
+    'General Information':{c:'gen',i:'info'},
+  };
+  const cat=CM[p.category]||{c:'gen',i:'info'};
+  const badges=[F.preg?`<span class="fb2 preg"><i data-lucide="baby" style="width:9px;height:9px"></i> Pregnancy</span>`:'',
+                F.peds?`<span class="fb2 peds"><i data-lucide="users" style="width:9px;height:9px"></i> Pediatric</span>`:'',
+                F.geri?`<span class="fb2 geri"><i data-lucide="accessibility" style="width:9px;height:9px"></i> Geriatric</span>`:'',
+                F.counsel?`<span class="fb2 cmode"><i data-lucide="message-circle" style="width:9px;height:9px"></i> Counselor</span>`:''
+               ].filter(Boolean).join('');
+  const bH=badges?`<div class="fbadges">${badges}</div>`:'';
+  const wH=p.warning?`<div class="aalert warn"><i data-lucide="alert-triangle" style="width:13px;height:13px;flex-shrink:0"></i><span>${p.warning}</span></div>`:'';
+  const dH=p.danger?`<div class="aalert dng"><i data-lucide="shield-alert" style="width:13px;height:13px;flex-shrink:0"></i><span>${p.danger}</span></div>`:'';
+  const kH=p.keyPoints?.length?`<div class="kpw"><div class="aslbl"><i data-lucide="list-checks" style="width:11px;height:11px"></i> Key Points</div>${p.keyPoints.map(k=>`<div class="kpi"><div class="kpd"></div><span>${k}</span></div>`).join('')}</div>`:'';
+  const sH=(p.sources||[]).map(s=>`<span class="srcc">${esc(s)}</span>`).join('');
+  const plain=[p.summary,p.warning?'Warning: '+p.warning:'',p.danger?'Danger: '+p.danger:'',(p.details||'').replace(/<[^>]+>/g,''),p.keyPoints?.length?'Key points: '+p.keyPoints.join('. '):'','Sources: '+(p.sources||[]).join(', ')].filter(Boolean).join('\n\n');
+
+  const d=document.createElement('div');d.className='msg';
+  d.innerHTML=`<div class="avatar ai"><i data-lucide="bot" style="width:14px;height:14px"></i></div>
+  <div class="bubble" style="max-width:84%"><div class="aic">
+    <div class="ctag ${cat.c}"><i data-lucide="${cat.i}" style="width:11px;height:11px"></i> ${p.category}</div>
+    ${bH}
+    <div class="asum"><i data-lucide="bookmark" style="width:12px;height:12px"></i> ${p.summary}</div>
+    ${wH}${dH}
+    <div class="aslbl" style="padding-top:12px"><i data-lucide="book-open" style="width:11px;height:11px"></i> Details</div>
+    <div class="abody">${p.details}</div>
+    ${kH}
+    <div class="srcrow"><span class="srclbl"><i data-lucide="library" style="width:10px;height:10px"></i> Sources</span>${sH}</div>
+    <div class="acbar">
+      <button class="acbtn" id="tts-${Date.now()}"><i data-lucide="volume-2" style="width:13px;height:13px"></i> Read Aloud</button>
+      <button class="acbtn" id="cp-${Date.now()}"><i data-lucide="copy" style="width:13px;height:13px"></i> Copy</button>
+    </div>
+  </div></div>`;
+
+  const btns=d.querySelectorAll('.acbtn');
+  btns[0].addEventListener('click',()=>tts(plain,btns[0]));
+  btns[1].addEventListener('click',()=>copyTxt(plain,btns[1]));
+  chat().appendChild(d);lucide.createIcons();scrollDown();
+}
+
+function appendErr(msg){
+  const d=document.createElement('div');d.className='msg';
+  d.innerHTML=`<div class="avatar ai"><i data-lucide="bot" style="width:14px;height:14px"></i></div><div class="bubble"><div class="aic"><div class="ctag se"><i data-lucide="alert-circle" style="width:11px;height:11px"></i> Error</div><div class="abody"><p>${esc(msg)}</p></div></div></div>`;
+  chat().appendChild(d);lucide.createIcons();scrollDown();
+}
+
+/* ── TTS & COPY ── */
+function tts(text,btn){
+  if(!('speechSynthesis'in window)){alert('TTS not supported.');return;}
+  if(speechSynthesis.speaking){speechSynthesis.cancel();btn.innerHTML='<i data-lucide="volume-2" style="width:13px;height:13px"></i> Read Aloud';lucide.createIcons();return;}
+  const u=new SpeechSynthesisUtterance(text);u.rate=0.95;
+  u.onstart=()=>{btn.innerHTML='<i data-lucide="square" style="width:13px;height:13px"></i> Stop';lucide.createIcons();};
+  u.onend=u.onerror=()=>{btn.innerHTML='<i data-lucide="volume-2" style="width:13px;height:13px"></i> Read Aloud';lucide.createIcons();};
+  speechSynthesis.speak(u);
+}
+function copyTxt(text,btn){
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.innerHTML='<i data-lucide="check" style="width:13px;height:13px"></i> Copied!';lucide.createIcons();
+    setTimeout(()=>{btn.innerHTML='<i data-lucide="copy" style="width:13px;height:13px"></i> Copy';lucide.createIcons();},2000);
+  });
+}
+
+/* ── BUILD SYSTEM PROMPT ── */
+function buildPrompt(){
+  const fl=[];
+  if(F.preg)fl.push('- PREGNANCY FILTER: State FDA Pregnancy Category (A/B/C/D/X) and PLLR safety data for every drug. Highlight teratogenic risks and safe alternatives.');
+  if(F.peds)fl.push('- PEDIATRIC FILTER: Provide mg/kg dosing for children. Note age restrictions, pediatric contraindications, and weight-based calculations.');
+  if(F.geri)fl.push('- GERIATRIC FILTER: Cross-reference Beers Criteria. Flag falls risk, anticholinergic burden, CNS effects, QT prolongation. Suggest safer alternatives.');
+  const lang=F.counsel
+    ?'COUNSELOR MODE: Use simple 6th-grade English. Replace jargon — "xerostomia"→"dry mouth", "myocardial infarction"→"heart attack". Be warm and reassuring.'
+    :'STUDENT MODE: Use precise medical/pharmacological terminology. Include PK parameters (Vd, t½, protein binding, Tmax, bioavailability) where relevant. Reference evidence-based guidelines.';
+  return `You are PharmAI, a senior clinical pharmacist and drug information specialist providing evidence-based drug information.
+Language: ${lang}
+${fl.length?'Safety Filters:\n'+fl.join('\n'):''}
+Respond ONLY in this exact JSON (no markdown, no code fences):
+{"category":"<Side Effects|Dosage|Drug Interaction|Contraindication|Mechanism of Action|General Information>","summary":"<one precise sentence>","warning":"<moderate safety concern or null>","danger":"<critical risk or null>","details":"<detailed HTML using p,ul,li,strong 2-4 paragraphs>","keyPoints":["<point1>","<point2>","<point3>"],"sources":["<s1>","<s2>","<s3>"]}
+Source pool: FDA, WHO, PubMed, MedlinePlus, Drugs.com, DailyMed, BNF, ASHP, UpToDate, Beers Criteria, ACC/AHA, ACOG.`;
+}
+
+/* ── SEND QUERY ── */
+async function sendQuery(){
+  const text=document.getElementById('query').value.trim();
+  if(!text||loading)return;
+  const key=getKey();
+  if(!key||!key.startsWith('gsk_')){appendErr('No valid Groq API key. Please log out and re-enter your key.');return;}
+  loading=true;document.getElementById('sbtn').disabled=true;
+  document.getElementById('query').value='';document.getElementById('query').style.height='auto';
+  appendUser(text);appendTyping();
+  const msgs=[
+    {role:'system',content:buildPrompt()},
+    ...hist.slice(-MAX_HIST*2),
+    {role:'user',content:text}
+  ];
+  try{
+    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:GROQ_MODEL,messages:msgs,temperature:0.25,max_tokens:1400,response_format:{type:'json_object'}})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    const raw=data.choices?.[0]?.message?.content||'';
+    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    removeTyping();appendAI(parsed);
+    hist.push({role:'user',content:text},{role:'assistant',content:raw});
+    saveHist();
+    if(SHEETS_URL)fetch(SHEETS_URL,{method:'POST',body:JSON.stringify({timestamp:new Date().toISOString(),accessCode:user,query:text,category:parsed.category,summary:parsed.summary,response:(parsed.details||'').replace(/<[^>]+>/g,''),sources:(parsed.sources||[]).join(', '),filters:Object.entries(F).filter(([,v])=>v).map(([k])=>k).join(',')||'none'})}).catch(()=>{});
+  }catch(e){removeTyping();appendErr('Error: '+e.message);}
+  loading=false;document.getElementById('sbtn').disabled=false;document.getElementById('query').focus();
+}
+
+/* ── MIC ── */
+function initMic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return;
+  recog=new SR();recog.continuous=false;recog.interimResults=false;recog.lang='en-US';
+  recog.onresult=e=>{const t=e.results[0][0].transcript;const q=document.getElementById('query');q.value+=(q.value?' ':'')+t;autoResize();q.focus();setMic(false);};
+  recog.onerror=()=>setMic(false);recog.onend=()=>setMic(false);
+}
+function toggleMic(){
+  if(!recog){alert('Voice input not supported.');return;}
+  if(micOn){recog.stop();setMic(false);}else{recog.start();setMic(true);}
+}
+function setMic(on){
+  micOn=on;
+  const btn=document.getElementById('micbtn'),ico=document.getElementById('micico');
+  ico.setAttribute('data-lucide',on?'mic-off':'mic');
+  btn.classList.toggle('micon',on);
+  lucide.createIcons();
+}
+
+/* ── CAMERA ── */
+const vid=()=>document.getElementById('video');
+async function openCamera(){
+  document.getElementById('cm').classList.add('open');
+  try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});vid().srcObject=s;}
+  catch(e){alert('Camera access denied.');closeCamera();}
+}
+function closeCamera(){const s=vid().srcObject;if(s)s.getTracks().forEach(t=>t.stop());vid().srcObject=null;document.getElementById('cm').classList.remove('open');}
+async function captureAndScan(){
+  const btn=document.getElementById('snapbtn');btn.disabled=true;
+  btn.innerHTML='<i data-lucide="loader" style="width:20px;height:20px;animation:spin 1s linear infinite"></i> Processing…';lucide.createIcons();
+  const c=document.getElementById('canvas'),v=vid();c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
+  try{
+    const r=await Tesseract.recognize(c,'eng');const txt=r.data.text.trim();
+    if(txt&&txt.length>3){closeCamera();document.getElementById('ocredit').value=txt;document.getElementById('opm').classList.add('open');}
+    else alert('No text detected. Try better lighting.');
+  }catch(e){alert('OCR error. Try again.');}
+  btn.disabled=false;btn.innerHTML='<i data-lucide="camera" style="width:20px;height:20px"></i> Take Photo &amp; Scan';lucide.createIcons();
+}
+function closeOCR(){document.getElementById('opm').classList.remove('open');}
+function confirmOCR(){const t=document.getElementById('ocredit').value.trim();if(!t)return;insertQuery(t);closeOCR();}
+</script>
+</body>
+</html>
