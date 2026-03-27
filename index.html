@@ -3,7 +3,7 @@
 <head>
   <link rel="manifest" href="manifest.json"/>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover" />
   <meta name="theme-color" content="#080e1a" id="tcm"/>
   <title>PharmAI — Drug Information Assistant</title>
   <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');</script>
@@ -13,7 +13,7 @@
   <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html{-webkit-text-size-adjust:100%}
+
 :root{
   --bg:#080e1a;--surface:#0f172a;--card:#162035;--card2:#1e2d48;
   --border:#1e3050;--border2:#263d66;
@@ -39,25 +39,23 @@ body.light{
   --accent2:#4f46e5;--a2dim:rgba(79,70,229,.08);
   --text:#0f172a;--text2:#475569;--muted:#94a3b8;
 }
-body {
+html, body {
+  width: 100%;
+  height: 100%;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  /* Use 'dvh' so it fills the screen perfectly in App mode */
-  min-height: 100dvh; 
+  padding: 0;
   
-  /* These two lines center everything automatically */
-  justify-content: center; 
-  align-items: center;    
-
-  /* These 'env' lines stop your content from being hidden by the camera notch */
-  padding-top: env(safe-area-inset-top, 20px);
-  padding-bottom: env(safe-area-inset-bottom, 20px);
-  padding-left: 15px;
-  padding-right: 15px;
-
-  box-sizing: border-box;
-  background-color: #ffffff; /* Or your preferred color */
+  /* The Ultimate Lockdown */
+  position: fixed; 
+  overflow: hidden; 
+  overscroll-behavior-y: none; /* Kills the rubber-band bounce effect */
+  touch-action: pan-x pan-y;   /* Prevents double-tap zooming */
+  
+  font-family: var(--ff);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  -webkit-text-size-adjust: 100%;
 }
 /* LOGIN */
 #lp{display:flex;align-items:center;justify-content:center;height:100dvh;width:100%;padding:20px;
@@ -137,7 +135,16 @@ header{display:flex;align-items:center;gap:10px;padding:0 20px;height:58px;backg
 .cp.gen:hover{border-color:var(--ok);color:var(--ok);background:var(--okdim)}
 
 /* CHAT */
-#chat{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:18px;overscroll-behavior:contain}
+#chat {
+  flex: 1;
+  overflow-y: auto; /* Lets the chat scroll */
+  -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling on iPhones */
+  overscroll-behavior: contain; /* Stops the scroll from leaking to the background */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
 #chat::-webkit-scrollbar{width:4px}
 #chat::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
@@ -344,49 +351,7 @@ body.light #snapbtn{color:#fff}
       </div>
     </header>
 
-    <div id="fb">
-      <span class="flbl">Filters</span>
-      <div class="tw preg" id="t-preg" onclick="toggleFilter('preg')">
-        <div class="tico"><i data-lucide="baby" style="width:12px;height:12px"></i></div>
-        <div class="tsw"></div><span class="tlbl">Pregnancy</span>
-      </div>
-      <div class="tw peds" id="t-peds" onclick="toggleFilter('peds')">
-        <div class="tico"><i data-lucide="users" style="width:12px;height:12px"></i></div>
-        <div class="tsw"></div><span class="tlbl">Pediatric</span>
-      </div>
-      <div class="tw geri" id="t-geri" onclick="toggleFilter('geri')">
-        <div class="tico"><i data-lucide="accessibility" style="width:12px;height:12px"></i></div>
-        <div class="tsw"></div><span class="tlbl">Geriatric</span>
-      </div>
-      <div class="fdiv"></div>
-      <div class="tw counsel" id="t-counsel" onclick="toggleFilter('counsel')">
-        <div class="tico"><i data-lucide="message-circle" style="width:12px;height:12px"></i></div>
-        <div class="tsw"></div><span class="tlbl">Counselor Mode</span>
-      </div>
-    </div>
-
-    <div id="cb">
-      <div class="cp se"  onclick="insertQuery('What are the side effects of ibuprofen?')"><i data-lucide="zap" style="width:11px;height:11px"></i> Side Effects</div>
-      <div class="cp dos" onclick="insertQuery('What is the dosage of amoxicillin for adults?')"><i data-lucide="pill" style="width:11px;height:11px"></i> Dosage</div>
-      <div class="cp int" onclick="insertQuery('Can I take metformin with aspirin?')"><i data-lucide="activity" style="width:11px;height:11px"></i> Interactions</div>
-      <div class="cp con" onclick="insertQuery('Who should not take warfarin?')"><i data-lucide="shield-x" style="width:11px;height:11px"></i> Contraindications</div>
-      <div class="cp mec" onclick="insertQuery('How does metoprolol work?')"><i data-lucide="cpu" style="width:11px;height:11px"></i> Mechanism</div>
-      <div class="cp gen" onclick="insertQuery('What is atorvastatin used for?')"><i data-lucide="info" style="width:11px;height:11px"></i> General Info</div>
-    </div>
-
-    <div id="chat"><div id="welcome-wrap"></div></div>
-
-  </div> <div id="ia">
-    <div class="irow">
-      <button class="iibtn" onclick="openCamera()" title="Scan label"><i data-lucide="camera" style="width:18px;height:18px"></i></button>
-      <button class="iibtn" id="micbtn" onclick="toggleMic()" title="Voice input"><i data-lucide="mic" style="width:18px;height:18px" id="micico"></i></button>
-      <textarea id="query" rows="1" placeholder="Type, speak, or scan a label…"></textarea>
-      <button id="sbtn" onclick="sendQuery()"><i data-lucide="send" style="width:15px;height:15px"></i></button>
-    </div>
-    <div class="ihint">Enter to send · Shift+Enter for new line</div>
-  </div>
-  <div class="disc"><i data-lucide="alert-triangle" style="width:11px;height:11px"></i> Educational &amp; clinical reference only. Always verify with licensed healthcare professionals.</div>
-</div>
+    
   <!-- FILTERS BAR -->
   <div id="fb">
     <span class="flbl">Filters</span>
@@ -408,20 +373,6 @@ body.light #snapbtn{color:#fff}
       <div class="tsw"></div><span class="tlbl">Counselor Mode</span>
     </div>
   </div>
-
-  <!-- CAT BAR -->
-  <div id="cb">
-    <div class="cp se"  onclick="insertQuery('What are the side effects of ibuprofen?')"><i data-lucide="zap" style="width:11px;height:11px"></i> Side Effects</div>
-    <div class="cp dos" onclick="insertQuery('What is the dosage of amoxicillin for adults?')"><i data-lucide="pill" style="width:11px;height:11px"></i> Dosage</div>
-    <div class="cp int" onclick="insertQuery('Can I take metformin with aspirin?')"><i data-lucide="activity" style="width:11px;height:11px"></i> Interactions</div>
-    <div class="cp con" onclick="insertQuery('Who should not take warfarin?')"><i data-lucide="shield-x" style="width:11px;height:11px"></i> Contraindications</div>
-    <div class="cp mec" onclick="insertQuery('How does metoprolol work?')"><i data-lucide="cpu" style="width:11px;height:11px"></i> Mechanism</div>
-    <div class="cp gen" onclick="insertQuery('What is atorvastatin used for?')"><i data-lucide="info" style="width:11px;height:11px"></i> General Info</div>
-  </div>
-
-  <!-- CHAT -->
-  <div id="chat"><div id="welcome-wrap"></div></div>
-
   <!-- INPUT -->
   <div id="ia">
     <div class="irow">
