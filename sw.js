@@ -1,9 +1,9 @@
-const CACHE_NAME = 'pharmai-v1';
+const CACHE_NAME = 'pharmai-v2'; // Changed v1 to v2 to force an update
 const FILES_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon.png'
 ];
 
 // Step 1: Install the Service Worker and save the files to the phone
