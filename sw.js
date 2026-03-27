@@ -1,31 +1,15 @@
-const CACHE_NAME = 'pharmai-v4'; // Upgraded to v5
+const CACHE_NAME = 'pharmai-v5';
 const FILES_TO_CACHE = [
-  './index.html'
+  './index.html' 
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Forces the waiting service worker to become the active one immediately
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(FILES_TO_CACHE);
     })
   );
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('Deleting old cache:', cache);
-            return caches.delete(cache); // Deletes v1, v2, and v3 for good
-          }
-        })
-      );
-    })
-  );
-  return self.clients.claim(); // Forces the SW to take control of the page immediately
 });
 
 self.addEventListener('fetch', (event) => {
